@@ -1,0 +1,86 @@
+project:
+  name: underwater-marine-debris-ai
+  version: "1.0.0"
+  seed: 42
+
+paths:
+  data_root: data/sonar
+  images_dir: data/sonar/images
+  labels_dir: data/sonar/labels
+  metadata_dir: data/sonar/metadata
+  processed_dir: data/processed
+  outputs_dir: outputs
+  models_dir: models
+
+model:
+  architecture: yolov8s-seg        # yolov8s-seg or yolov8s
+  weights: yolov8s-seg.pt
+  input_size: 640
+  device: auto                     # auto, cpu, cuda, mps
+
+training:
+  epochs: 100
+  patience: 20
+  batch_size: 16
+  optimizer: AdamW
+  lr0: 0.001
+  lrf: 0.01
+  weight_decay: 0.0005
+  warmup_epochs: 3
+  val_split: 0.2
+  test_split: 0.1
+  mosaic: 1.0
+  copy_paste: 0.3
+
+preprocessing:
+  enabled: true
+  median_filter: true
+  median_kernel: 3
+  bilateral_filter: true
+  bilateral_d: 9
+  bilateral_sigma_color: 75
+  bilateral_sigma_space: 75
+  clahe: true
+  clahe_clip_limit: 2.0
+  clahe_tile_grid: [8, 8]
+  normalize: true
+  tiling:
+    enabled: false
+    tile_size: 640
+    overlap: 0.2
+
+augmentation:
+  flipud: 0.5
+  fliplr: 0.5
+  degrees: 5.0
+  scale: 0.3
+  translate: 0.1
+  hsv_v: 0.2
+  hsv_h: 0.0
+  hsv_s: 0.0
+  noise_injection: true
+  random_erasing: 0.1
+
+postprocessing:
+  confidence_thresholds:
+    default: 0.35
+  iou_threshold: 0.45
+  min_area_px: 64
+  max_area_fraction: 0.40
+  shadow_consistency_check: true
+  nadir_position: top              # top, bottom, center
+
+geospatial:
+  coordinate_type_required_fields:
+    - latitude
+    - longitude
+    - heading
+    - across_track_resolution
+
+reporting:
+  output_formats: [csv, json]
+  include_empty_detections: false
+
+logging:
+  level: INFO
+  file: outputs/run.log
