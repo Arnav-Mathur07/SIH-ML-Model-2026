@@ -4,17 +4,17 @@ project:
   seed: 42
 
 paths:
-  data_root: data/sonar
-  images_dir: data/sonar/images
-  labels_dir: data/sonar/labels
-  metadata_dir: data/sonar/metadata
+  data_root: data/dataset
+  images_dir: data/dataset/train/images
+  labels_dir: data/dataset/train/labels
+  metadata_dir: data/dataset/metadata
   processed_dir: data/processed
   outputs_dir: outputs
   models_dir: models
 
 model:
   architecture: yolov8s-seg        # yolov8s-seg or yolov8s
-  weights: yolov8s-seg.pt
+  weights: models/weights/best.pt
   input_size: 640
   device: auto                     # auto, cpu, cuda, mps
 

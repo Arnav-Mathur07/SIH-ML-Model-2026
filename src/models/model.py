@@ -39,13 +39,14 @@ class ModelWrapper:
         
         return YOLO(str(model_path))
 
-    def predict(self, image: np.ndarray, conf_threshold: float = 0.25) -> List[RawPrediction]:
+    def predict(self, image: np.ndarray, conf_threshold: float = 0.25, augment: bool = False) -> List[RawPrediction]:
         # Ultralytics predictor
         results = self.model.predict(
             source=image, 
             device=self.device, 
             imgsz=self.config.input_size,
             conf=conf_threshold,
+            augment=augment,
             verbose=False
         )
         

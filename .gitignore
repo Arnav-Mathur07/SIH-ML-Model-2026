@@ -4,3 +4,8 @@ __pycache__/
 outputs/
 data/processed/
 notebooks/.ipynb_checkpoints/
+*.zip
+data/archive_extracted/
+data/archive_1_extracted/
+data/dataset/
+data/sonar/

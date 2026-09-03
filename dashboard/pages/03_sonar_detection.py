@@ -38,6 +38,12 @@ config.preprocessing.median_filter = use_median
 config.preprocessing.bilateral_filter = use_bilateral
 config.preprocessing.clahe = use_clahe
 config.preprocessing.normalize = use_norm
+config.preprocessing.enabled = any([use_median, use_bilateral, use_clahe, use_norm])
+
+st.sidebar.subheader("Advanced Inference")
+inf_size = st.sidebar.select_slider("Inference Resolution (Higher = Better for small objects)", options=[320, 640, 1024, 1280, 1920], value=config.model.input_size)
+use_tta = st.sidebar.checkbox("Deep Scan (TTA)", value=False)
+config.model.input_size = inf_size
 
 conf_thresh = st.sidebar.slider("Confidence Threshold", 0.0, 1.0, config.postprocessing.confidence_thresholds.default)
 
@@ -66,7 +72,7 @@ if uploaded_file is not None:
             try:
                 model = ModelWrapper(config)
                 inference_engine = TiledInferenceEngine(model, config)
-                preds, inf_time = inference_engine.run_inference(prep_img)
+                preds, inf_time = inference_engine.run_inference(prep_img, augment=use_tta)
                 
                 # Filter by confidence
                 preds = [p for p in preds if p.confidence >= conf_thresh]

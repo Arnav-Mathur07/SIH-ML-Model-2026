@@ -19,18 +19,18 @@ class TiledInferenceEngine:
                 overlap=config.preprocessing.tiling.overlap
             )
 
-    def run_inference(self, image: np.ndarray) -> Tuple[List[RawPrediction], float]:
+    def run_inference(self, image: np.ndarray, augment: bool = False) -> Tuple[List[RawPrediction], float]:
         start_time = time.time()
         
         if self.tiling_enabled:
-            predictions = self._run_tiled(image)
+            predictions = self._run_tiled(image, augment=augment)
         else:
-            predictions = self.model.predict(image, conf_threshold=0.1) # low conf, filtered later
+            predictions = self.model.predict(image, conf_threshold=0.1, augment=augment) # low conf, filtered later
             
         inference_time_ms = (time.time() - start_time) * 1000
         return predictions, inference_time_ms
 
-    def _run_tiled(self, image: np.ndarray) -> List[RawPrediction]:
+    def _run_tiled(self, image: np.ndarray, augment: bool = False) -> List[RawPrediction]:
         tiles = self.tiling_engine.split(image)
         all_predictions = []
         
@@ -39,7 +39,7 @@ class TiledInferenceEngine:
             x_offset = tile_meta["x_offset"]
             y_offset = tile_meta["y_offset"]
             
-            tile_preds = self.model.predict(tile_img, conf_threshold=0.1)
+            tile_preds = self.model.predict(tile_img, conf_threshold=0.1, augment=augment)
             
             # Map coordinates back to full image
             for p in tile_preds:
