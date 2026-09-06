@@ -13,10 +13,12 @@ paths:
   models_dir: models
 
 model:
-  architecture: yolov8s-seg        # yolov8s-seg or yolov8s
-  weights: models/weights/best.pt
-  input_size: 640
-  device: auto                     # auto, cpu, cuda, mps
+  architecture: yolov8s
+  weights: yolov8s.pt
+  device: "" 
+  img_size: 640
+  confidence_threshold: 0.25
+  iou_threshold: 0.45                    # auto, cpu, cuda, mps
 
 training:
   epochs: 100

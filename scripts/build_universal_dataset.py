@@ -4,89 +4,79 @@ import random
 from pathlib import Path
 import logging
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-def get_pairs_from_dir(img_dir, lbl_dir=None):
-    pairs = []
-    if lbl_dir is None:
-        lbl_dir = img_dir # Labels are alongside images
-        
-    img_dir_path = Path(img_dir)
-    lbl_dir_path = Path(lbl_dir)
+def build_sonar_dataset():
+    """
+    Builds a pure Side-Scan Sonar dataset from data/sonar
+    Splits into 80/10/10 train/val/test splits.
+    """
+    base_dir = Path("data")
+    sonar_dir = base_dir / "sonar"
+    out_dir = base_dir / "dataset"
     
-    if not img_dir_path.exists():
-        return pairs
+    if out_dir.exists():
+        logging.info("Cleaning old dataset directory...")
+        shutil.rmtree(out_dir)
         
-    for img_path in img_dir_path.glob("*.jpg"):
-        lbl_path = lbl_dir_path / f"{img_path.stem}.txt"
-        if lbl_path.exists():
-            pairs.append((img_path, lbl_path))
-    return pairs
+    for split in ['train', 'val', 'test']:
+        (out_dir / split / 'images').mkdir(parents=True, exist_ok=True)
+        (out_dir / split / 'labels').mkdir(parents=True, exist_ok=True)
+        
+    images_dir = sonar_dir / "images"
+    labels_dir = sonar_dir / "labels"
+    
+    if not images_dir.exists() or not labels_dir.exists():
+        logging.error("Sonar images or labels directory not found!")
+        return
 
-def main():
-    random.seed(42)
-    
-    # 1. Collect all pairs from all sources
-    all_pairs = []
-    
-    # Sonar Data
-    all_pairs.extend(get_pairs_from_dir("data/sonar/images", "data/sonar/labels"))
-    
-    # Optical Data 1 (TrashCan test folder)
-    all_pairs.extend(get_pairs_from_dir("data/archive_extracted/test"))
-    
-    # Optical Data 2 (Underwater Plastics)
-    base_opt = Path("data/archive_1_extracted/underwater_plastics")
-    for split in ["train", "valid", "test"]:
-        all_pairs.extend(get_pairs_from_dir(base_opt / split / "images", base_opt / split / "labels"))
+    # Get all valid image files that have corresponding labels
+    all_images = []
+    for ext in ['*.jpg', '*.png', '*.jpeg']:
+        all_images.extend(list(images_dir.glob(ext)))
         
-    if not all_pairs:
-        logging.error("No image/label pairs found!")
+    valid_pairs = []
+    for img_path in all_images:
+        label_path = labels_dir / f"{img_path.stem}.txt"
+        if label_path.exists():
+            valid_pairs.append((img_path, label_path))
+            
+    total = len(valid_pairs)
+    logging.info(f"Found {total} valid Sonar image/label pairs.")
+    
+    if total == 0:
         return
         
-    logging.info(f"Total image/label pairs found across all datasets: {len(all_pairs)}")
+    # Shuffle and split 80/10/10
+    random.seed(42)
+    random.shuffle(valid_pairs)
     
-    # 2. Shuffle
-    random.shuffle(all_pairs)
-    
-    # 3. Split 80/10/10
-    total = len(all_pairs)
     train_end = int(total * 0.8)
-    val_end = train_end + int(total * 0.1)
+    val_end = int(total * 0.9)
     
     splits = {
-        "train": all_pairs[:train_end],
-        "val": all_pairs[train_end:val_end],
-        "test": all_pairs[val_end:]
+        'train': valid_pairs[:train_end],
+        'val': valid_pairs[train_end:val_end],
+        'test': valid_pairs[val_end:]
     }
     
-    dataset_out_dir = Path("data/dataset")
-    
-    # 4. Copy and Normalize to Class 0 (Debris)
+    # Copy files
     for split_name, pairs in splits.items():
-        split_img_dir = dataset_out_dir / split_name / "images"
-        split_lbl_dir = dataset_out_dir / split_name / "labels"
-        
-        split_img_dir.mkdir(parents=True, exist_ok=True)
-        split_lbl_dir.mkdir(parents=True, exist_ok=True)
-        
-        logging.info(f"Writing {len(pairs)} pairs to {split_name} split...")
-        for img_path, lbl_path in pairs:
-            # Copy image
-            new_img_path = split_img_dir / f"{img_path.parent.parent.name}_{img_path.name}"
-            shutil.copy2(img_path, new_img_path)
-            
-            # Read label, convert all class IDs to 0, write new label
-            new_lbl_path = split_lbl_dir / f"{img_path.parent.parent.name}_{lbl_path.name}"
-            
-            with open(lbl_path, "r") as f_in, open(new_lbl_path, "w") as f_out:
+        logging.info(f"Copying {len(pairs)} files to {split_name} split...")
+        for img_path, label_path in pairs:
+            # We enforce all labels to be class 0 (Debris/Anomaly)
+            new_label_path = out_dir / split_name / 'labels' / label_path.name
+            with open(label_path, 'r') as f_in, open(new_label_path, 'w') as f_out:
                 for line in f_in:
                     parts = line.strip().split()
                     if len(parts) >= 5:
-                        parts[0] = "0" # Force class ID to 0
-                        f_out.write(" ".join(parts) + "\n")
-                        
-    logging.info("Universal dataset created successfully in data/dataset/")
+                        # Force class ID to 0
+                        f_out.write(f"0 {' '.join(parts[1:])}\n")
+            
+            # Copy image
+            shutil.copy2(img_path, out_dir / split_name / 'images' / img_path.name)
+            
+    logging.info("Successfully built pure Side-Scan Sonar dataset!")
 
 if __name__ == "__main__":
-    main()
+    build_sonar_dataset()
